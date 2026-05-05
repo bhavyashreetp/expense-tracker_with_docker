@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Expense Tracker</title>
+
+<style>
+body {
+    font-family: Arial;
+    background: #f4f6f9;
+    padding: 20px;
+}
+
+.container {
+    width: 60%;
+    margin: auto;
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+h2 {
+    text-align: center;
+}
+
+input, select, button {
+    padding: 8px;
+    margin: 5px;
+}
+
+button {
+    background: #007bff;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #0056b3;
+}
+
+.delete-btn {
+    background: red;
+}
+
+.edit-btn {
+    background: orange;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+}
+
+th, td {
+    padding: 10px;
+    border-bottom: 1px solid #ddd;
+    text-align: center;
+}
+
+.total {
+    font-weight: bold;
+    margin-top: 10px;
+}
+</style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+<h2>Expense Tracker</h2>
+
+<h3>Add Expense</h3>
+
+<input id="amount" type="number" placeholder="Amount">
+<input id="category" placeholder="Category">
+<input id="description" placeholder="Description">
+<input id="date" type="date">
+
+<button onclick="add()">Add</button>
+
+<hr>
+
+<input id="filter" placeholder="Category">
+
+<select id="sort">
+<option value="">No Sort</option>
+<option value="newest">Newest</option>
+<option value="oldest">Oldest</option>
+</select>
+
+<button onclick="load()">Apply</button>
+
+<table>
+<thead>
+<tr>
+<th>Amount</th>
+<th>Category</th>
+<th>Description</th>
+<th>Date</th>
+<th>Actions</th>
+</tr>
+</thead>
+
+<tbody id="list"></tbody>
+</table>
+
+<h3 class="total" id="total"></h3>
+
+</div>
+
+<script>
+const API="http://127.0.0.1:8000";
+
+async function add(){
+await fetch(API+"/expenses",{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({
+amount:parseFloat(amount.value),
+category:category.value,
+description:description.value,
+date:date.value,
+idempotency_key:Date.now().toString()
+})
+});
+load();
+}
+
+async function load(){
+let r=await fetch(API+"/expenses");
+let d=await r.json();
+
+let data = d.data;
+
+// filter
+if(filter.value){
+    data = data.filter(e => e.category === filter.value);
+}
+
+// sort
+if(sort.value === "newest"){
+    data.sort((a,b)=> new Date(b.date) - new Date(a.date));
+}
+if(sort.value === "oldest"){
+    data.sort((a,b)=> new Date(a.date) - new Date(b.date));
+}
+
+list.innerHTML="";
+let totalAmt = 0;
+
+data.forEach(e=>{
+    totalAmt += e.amount;
+
+    list.innerHTML += `
+    <tr>
+        <td>${e.amount}</td>
+        <td>${e.category}</td>
+        <td>${e.description}</td>
+        <td>${e.date}</td>
+        <td>
+            <button class="edit-btn" onclick="edit(${e.id})">Edit</button>
+            <button class="delete-btn" onclick="del(${e.id})">Delete</button>
+        </td>
+    </tr>`;
+});
+
+total.innerText="Total ₹"+totalAmt;
+}
+
+async function del(id){
+await fetch(API+"/expenses/"+id,{method:"DELETE"});
+load();
+}
+
+async function edit(id){
+let newAmount = prompt("Enter amount:");
+let newCategory = prompt("Enter category:");
+let newDesc = prompt("Enter description:");
+
+await fetch(API+"/expenses/"+id,{
+method:"PUT",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({
+amount:parseFloat(newAmount),
+category:newCategory,
+description:newDesc
+})
+});
+
+load();
+}
+
+load();
+</script>
+
+</body>
+</html>

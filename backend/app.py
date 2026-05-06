@@ -6,6 +6,10 @@ CORS(app)
 
 expenses = []
 
+@app.route("/")
+def home():
+    return "API running"
+
 @app.route("/expenses", methods=["GET"])
 def get_expenses():
     return jsonify(expenses)
@@ -15,6 +19,3 @@ def add_expense():
     data = request.json
     expenses.append(data)
     return jsonify({"message": "Expense added"}), 201
-
-if __name__ == "__main__":
-    app.run()

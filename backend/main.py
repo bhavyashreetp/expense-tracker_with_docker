@@ -9,6 +9,7 @@ Base.metadata.create_all(bind=engine)
 app = FastAPI()
 
 app.add_middleware(
+    CORSMiddleware,
     allow_origins=[
         "https://expense-tracker-with-docker-1.onrender.com",
         "https://expense-tracker-lwms.onrender.com",

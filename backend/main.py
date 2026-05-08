@@ -4,10 +4,14 @@ from database import SessionLocal, engine, Base
 import models, schemas
 from fastapi.middleware.cors import CORSMiddleware
 
-Base.metadata.create_all(bind=engine)
-
+# -------------------------
+# APP INIT
+# -------------------------
 app = FastAPI()
 
+# -------------------------
+# CORS FIX (CRITICAL FOR RENDER)
+# -------------------------
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -19,10 +23,24 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-    
-    
+    expose_headers=["*"],
 )
 
+# -------------------------
+# FORCE PREFLIGHT SUPPORT (FIX RENDER CORS ISSUE)
+# -------------------------
+@app.options("/{full_path:path}")
+def preflight_handler():
+    return {}
+
+# -------------------------
+# DB INIT (AFTER APP CREATION)
+# -------------------------
+Base.metadata.create_all(bind=engine)
+
+# -------------------------
+# DB SESSION
+# -------------------------
 def get_db():
     db = SessionLocal()
     try:
@@ -30,26 +48,27 @@ def get_db():
     finally:
         db.close()
 
+# -------------------------
+# CREATE EXPENSE
+# -------------------------
 @app.post("/expenses", response_model=schemas.ExpenseResponse)
 def create_expense(expense: schemas.ExpenseCreate, db: Session = Depends(get_db)):
-    if expense.idempotency_key:
-        existing = db.query(models.Expense).filter(
-            models.Expense.idempotency_key == expense.idempotency_key
-        ).first()
-        if existing:
-            return existing
-
     obj = models.Expense(**expense.dict())
     db.add(obj)
     db.commit()
     db.refresh(obj)
     return obj
 
+# -------------------------
+# GET EXPENSES
+# -------------------------
 @app.get("/expenses")
 def get_expenses(category: str = None, sort: str = None, db: Session = Depends(get_db)):
     q = db.query(models.Expense)
+
     if category:
         q = q.filter(models.Expense.category == category)
+
     if sort == "date_desc":
         q = q.order_by(models.Expense.date.desc())
 
@@ -58,6 +77,9 @@ def get_expenses(category: str = None, sort: str = None, db: Session = Depends(g
 
     return {"data": data, "total": total}
 
+# -------------------------
+# DELETE EXPENSE
+# -------------------------
 @app.delete("/expenses/{id}")
 def delete_expense(id: int, db: Session = Depends(get_db)):
     exp = db.query(models.Expense).filter(models.Expense.id == id).first()
@@ -69,6 +91,9 @@ def delete_expense(id: int, db: Session = Depends(get_db)):
     db.commit()
     return {"message": "Deleted successfully"}
 
+# -------------------------
+# UPDATE EXPENSE
+# -------------------------
 @app.put("/expenses/{id}")
 def update_expense(id: int, data: schemas.ExpenseUpdate, db: Session = Depends(get_db)):
     exp = db.query(models.Expense).filter(models.Expense.id == id).first()

@@ -18,5 +18,4 @@ class Expense(Base):
 
     created_at = Column(DateTime, default=datetime.utcnow)
 
-    # ✅ SAFE FIX: remove unique constraint
-    idempotency_key = Column(String, unique=True, nullable=True)
+    

@@ -106,32 +106,50 @@ th, td {
 </div>
 
 <script>
-const API = "https://expense-tracker-lwms.onrender.com";
+const API = "http://127.0.0.1:8000";
 
+// ADD
 async function add(){
     try{
-        await fetch(API + "/expenses", {
+        const payload = {
+            amount: parseFloat(document.getElementById("amount").value || 0),
+            category: document.getElementById("category").value,
+            description: document.getElementById("description").value,
+            date: document.getElementById("date").value
+        };
+
+        console.log("Sending:", payload);
+
+        const res = await fetch(API + "/expenses", {
             method:"POST",
-            headers: {"Content-Type":"application/json"},
-            body: JSON.stringify({
-                amount: parseFloat(amount.value || 0),
-                category: category.value,
-                description: description.value,
-                date: date.value
-            })
+            headers: { "Content-Type":"application/json" },
+            body: JSON.stringify(payload)
         });
 
-        amount.value = "";
-        category.value = "";
-        description.value = "";
-        date.value = "";
+        console.log("Status:", res.status);
+
+        if(!res.ok){
+            const err = await res.text();
+            console.error("Error:", err);
+            alert("Failed to add expense");
+            return;
+        }
+
+        // clear inputs
+        document.getElementById("amount").value = "";
+        document.getElementById("category").value = "";
+        document.getElementById("description").value = "";
+        document.getElementById("date").value = "";
 
         load();
+
     }catch(err){
         console.error("Add error:", err);
+        alert("Network error");
     }
 }
 
+// LOAD
 async function load(){
     try{
         let r = await fetch(API + "/expenses");
@@ -144,12 +162,10 @@ async function load(){
         let d = await r.json();
         let data = d.data || [];
 
-        // filter
         if(filter.value){
             data = data.filter(e => e.category === filter.value);
         }
 
-        // sort
         if(sort.value === "newest"){
             data.sort((a,b)=> new Date(b.date) - new Date(a.date));
         }
@@ -160,7 +176,7 @@ async function load(){
         list.innerHTML = "";
         let totalAmt = 0;
 
-        data.forEach((e,index)=>{
+        data.forEach((e)=>{
             totalAmt += Number(e.amount || 0);
 
             list.innerHTML += `
@@ -170,25 +186,26 @@ async function load(){
                 <td>${e.description}</td>
                 <td>${e.date}</td>
                 <td>
-                    <button class="edit-btn" onclick="edit(${index})">Edit</button>
-                    <button class="delete-btn" onclick="del(${index})">Delete</button>
+                    <button class="edit-btn" onclick="edit(${e.id})">Edit</button>
+                    <button class="delete-btn" onclick="del(${e.id})">Delete</button>
                 </td>
             </tr>`;
         });
 
-        // ✅ FIXED TOTAL DISPLAY
-        total.innerText = `Total Amount ₹ ${totalAmt.toLocaleString("en-IN")}`;
+        total.innerText = "Total Amount ₹ " + totalAmt.toLocaleString("en-IN");
 
     }catch(err){
         console.error("Load error:", err);
     }
 }
 
+// DELETE
 async function del(id){
     await fetch(API + "/expenses/" + id, { method:"DELETE" });
     load();
 }
 
+// EDIT
 async function edit(id){
     let newAmount = prompt("Enter amount:");
     let newCategory = prompt("Enter category:");

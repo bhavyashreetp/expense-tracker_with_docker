@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
+<meta charset="UTF-8">
 <title>Expense Tracker</title>
 
 <style>
@@ -53,6 +54,7 @@ th, td {
 .total {
     font-weight: bold;
     margin-top: 10px;
+    font-size: 18px;
 }
 </style>
 
@@ -88,7 +90,7 @@ th, td {
 <table>
 <thead>
 <tr>
-<th>Amount</th>
+<th>Amount (₹)</th>
 <th>Category</th>
 <th>Description</th>
 <th>Date</th>
@@ -99,12 +101,12 @@ th, td {
 <tbody id="list"></tbody>
 </table>
 
-<h3 class="total" id="total"></h3>
+<h3 class="total" id="total">Total Amount ₹ 0</h3>
 
 </div>
 
 <script>
-const API = "https://expense-tracker-lwms.onrender.com"; // ✅ correct backend
+const API = "https://expense-tracker-lwms.onrender.com";
 
 async function add(){
     try{
@@ -112,14 +114,13 @@ async function add(){
             method:"POST",
             headers: {"Content-Type":"application/json"},
             body: JSON.stringify({
-                amount: parseFloat(amount.value),
+                amount: parseFloat(amount.value || 0),
                 category: category.value,
                 description: description.value,
                 date: date.value
             })
         });
 
-        // clear inputs
         amount.value = "";
         category.value = "";
         description.value = "";
@@ -160,11 +161,11 @@ async function load(){
         let totalAmt = 0;
 
         data.forEach((e,index)=>{
-            totalAmt += Number(e.amount);
+            totalAmt += Number(e.amount || 0);
 
             list.innerHTML += `
             <tr>
-                <td>${e.amount}</td>
+                <td>₹ ${Number(e.amount).toLocaleString("en-IN")}</td>
                 <td>${e.category}</td>
                 <td>${e.description}</td>
                 <td>${e.date}</td>
@@ -175,7 +176,8 @@ async function load(){
             </tr>`;
         });
 
-        total.innerText = "Total ₹ " + totalAmt;
+        // ✅ FIXED TOTAL DISPLAY
+        total.innerText = `Total Amount ₹ ${totalAmt.toLocaleString("en-IN")}`;
 
     }catch(err){
         console.error("Load error:", err);
@@ -196,7 +198,7 @@ async function edit(id){
         method:"PUT",
         headers: {"Content-Type":"application/json"},
         body: JSON.stringify({
-            amount: parseFloat(newAmount),
+            amount: parseFloat(newAmount || 0),
             category: newCategory,
             description: newDesc
         })

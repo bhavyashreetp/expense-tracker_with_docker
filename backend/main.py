@@ -109,3 +109,16 @@ def update_expense(id: int, data: schemas.ExpenseUpdate, db: Session = Depends(g
     db.refresh(exp)
 
     return {"message": "Updated successfully"}
+
+@app.post("/expenses")
+def create_expense(expense: schemas.ExpenseCreate, db: Session = Depends(get_db)):
+    try:
+        obj = models.Expense(**expense.dict())
+        db.add(obj)
+        db.commit()
+        db.refresh(obj)
+        return obj
+
+    except Exception as e:
+        print("🔥 ERROR IN /expenses:", str(e))
+        return {"error": str(e)}
